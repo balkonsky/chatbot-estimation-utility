@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+ 
+    <Appenders>
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="[%d] [%p] [%c] [%t]| %msg%n"/>
+        </Console>
+		<File name="FileAppender" fileName="estimationutility.log">
+      <PatternLayout pattern="[%d] [%p] [%c] [%t]| %msg%n"/>
+    </File>
+    </Appenders>
+ 
+    <Loggers>
+       <Logger name= "ru.yota.estimationutility.StartApp" level="all" additivity="false">
+           <AppenderRef ref="FileAppender"/>
+       </Logger>
+	   
+	   <Logger name= "ru.yota.estimationutility.Classificator" level="all" additivity="false">
+           <AppenderRef ref="FileAppender"/>
+       </Logger>
+	   
+	   <Logger name= "ru.yota.estimationutility.ConfusionMatrix" level="all" additivity="false">
+           <AppenderRef ref="FileAppender"/>
+       </Logger>
+ 
+        <!-- Root Logger -->
+        <Root level="all" >
+            <AppenderRef ref="FileAppender"/>
+        </Root>
+    </Loggers>
+	
+</Configuration>
