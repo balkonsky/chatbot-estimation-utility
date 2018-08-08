@@ -2,95 +2,148 @@ package ru.yota.estimationutility;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import ru.yota.estimationutility.utils.Configuration;
+import ru.yota.estimationutility.utils.ExcelReader;
+import ru.yota.estimationutility.utils.ExcelWriter;
 
+import java.awt.image.AreaAveragingScaleFilter;
 import java.util.ArrayList;
-import java.util.List;
+import java.util.Map;
 
 public class StartApp {
-    private static String excel_file_read;
-    private static String excel_file_write;
-    private static String excel_matrix_write;
-    private static String host;
-    private static String url;
-    private static int port;
     private final static Logger log = LogManager.getLogger(StartApp.class);
+    private static ExcelReader excelReader = null;
+    private static Classificator classificator = new Classificator();
+    private static Configuration config = new Configuration();
+    private static ExcelWriter excelWriter = null;
+    private static ConfusionMatrix confusionMatrix = null;
+    private static Reporting reporting = null;
+
+    private static ArrayList<String> truelistsubject = new ArrayList<String>();
+    private static ArrayList<String> truelistphrase = new ArrayList<String>();
+
+    private static ArrayList<String> predlistfirstsubject = new ArrayList<String>();
+    private static ArrayList<String> predlistfirstconfidence = new ArrayList<String>();
+    private static ArrayList<String> predlistsecondsubject = new ArrayList<String>();
+    private static ArrayList<String> predlistsecondconfidence = new ArrayList<String>();
+    private static ArrayList<String> predlistthirdsubject = new ArrayList<String>();
+    private static ArrayList<String> predlistthirdconfidence = new ArrayList<String>();
+
+    private static ArrayList<String> sortlistuniquetruesubjects = null;
+    private static ArrayList<String> sortlistuniquepredsubjects = null;
 
     public static void main(String[] args) {
-        excel_file_read = args[0];
-        excel_file_write = args[1];
-        excel_matrix_write = args[2];
-        host = args[3];
-        url = args[4];
-        port = Integer.parseInt(args[5]);
-        log.trace("Application is started");
-        log.debug("Parameters received: test set read location = {}, reporting file location = {}, matrix file location = {}, host = {}, url = {}, port = {},",
-                excel_file_read, excel_file_write, excel_matrix_write, host, url, port);
+        try {
+            excelReader = new ExcelReader(config.getExcelInputTrueFileReadLocation(), config.getExcelInputTrueSheetName());
+            excelReader.readPhraseFromExcel();
+            excelReader.readSubjectFromExcel();
 
-        Classificator classificator = new Classificator();
-        ArrayList<String> list_pred_phrase = classificator.readXlsx_phrase(excel_file_read);
-        ArrayList<String> list_pred_subject = classificator.readXlsx_subject(excel_file_read);
-        ArrayList<String> list_nbest_first_subject = classificator.classifyPhrase(host, port, url, excel_file_write, list_pred_subject, list_pred_phrase);
+            truelistsubject = excelReader.getTrueListSubject();
+            truelistphrase = excelReader.getTrueListPhrase();
 
-               /* будущий задел под реализацию многопоточности
-            int part = list_pred_phrase.size() / 4;
-            final List<String> list_pred_phrase_first_part = list_pred_phrase.subList(0, part);
-            final List<String> list_pred_phrase_second_part = list_pred_phrase.subList(part, part + part);
-            final List<String> list_pred_phrase_third_part = list_pred_phrase.subList(part + part, part + part + part);
-            final List<String> list_pred_phrase_fourth_part = list_pred_phrase.subList(part + part + part, list_pred_phrase.size());
+            classificator.classifyPhrase(truelistsubject, truelistphrase);
 
-            final List<String> list_pred_subject_first_part = list_pred_subject.subList(0, part);
-            final List<String> list_pred_subject_second_part = list_pred_subject.subList(part, part + part);
-            final List<String> list_pred_subject_third_part = list_pred_subject.subList(part + part, part + part + part);
-            final List<String> list_pred_subject_fourth_part = list_pred_subject.subList(part + part + part, list_pred_phrase.size());
+            predlistfirstsubject = classificator.getPredFirstSubjectList();
+            predlistfirstconfidence = classificator.getPredFirstConfidenceList();
 
-            Thread firtst_thread = new Threads() {
-                @Override
-                public void run() {
-                    ArrayList<String> list_nbest_first_part_subject = classificator.classifyPhrase(host, port, url, excel_file_write, new ArrayList<String>(list_pred_subject_first_part), new ArrayList<String>(list_pred_phrase_first_part));
-                    list_nbest_first_subject.addAll(list_nbest_first_part_subject);
-                }
-            };
-            firtst_thread.start();
+            predlistsecondsubject = classificator.getPredSecondSubjectList();
+            predlistsecondconfidence = classificator.getPredSecondConfidenceList();
 
-            Thread second_thread = new Threads() {
-                @Override
-                public void run() {
-                    ArrayList<String> list_nbest_second_part_subject = classificator.classifyPhrase(host, port, url, excel_file_write, new ArrayList<String>(list_pred_subject_second_part), new ArrayList<String>(list_pred_phrase_second_part));
-                    list_nbest_first_subject.addAll(list_nbest_second_part_subject);
-                }
-            };
-            second_thread.start();
+            predlistthirdsubject = classificator.getPredThirdSubject();
+            predlistthirdconfidence = classificator.getPredThirdConfidenceList();
 
-            Thread third_thread = new Threads() {
-                @Override
-                public void run() {
-                    ArrayList<String> list_nbest_third_part_subject = classificator.classifyPhrase(host, port, url, excel_file_write, new ArrayList<String>(list_pred_subject_third_part), new ArrayList<String>(list_pred_phrase_third_part));
-                    list_nbest_first_subject.addAll(list_nbest_third_part_subject);
-                }
-            };
-            third_thread.start();
+            excelWriter = new ExcelWriter(config.getExcelOutputReportFileLocation());
+            excelWriter.writeToExcelFile(
+                    truelistsubject,
+                    truelistphrase,
+                    predlistfirstsubject,
+                    predlistfirstconfidence,
+                    predlistsecondsubject,
+                    predlistsecondconfidence,
+                    predlistthirdsubject,
+                    predlistthirdconfidence);
 
-            ArrayList<String> list_nbest_fourth_part_subject = classificator.classifyPhrase(host, port, url, excel_file_write, new ArrayList<String>(list_pred_subject_fourth_part), new ArrayList<String>(list_pred_phrase_fourth_part));
-            list_nbest_first_subject.addAll(list_nbest_fourth_part_subject);
+            sortlistuniquetruesubjects = classificator.getuSortUiqueTrueSubjects(truelistsubject);
+            sortlistuniquepredsubjects = classificator.getSortUniquePredSubjects(predlistfirstsubject);
+
+            confusionMatrix = new ConfusionMatrix(config.getExcelOutputReportFileLocation());
+            confusionMatrix.initMatrix(sortlistuniquetruesubjects,sortlistuniquepredsubjects,excelWriter.getCurrentWorkbook());
+            confusionMatrix.fillingMatrix(sortlistuniquetruesubjects,predlistfirstsubject,truelistsubject);
+
+            reporting = new Reporting();
+            excelWriter.writeSummaryStatistics(confusionMatrix.getSuccessPredPhraseMap(),reporting.countAccuracy(truelistsubject,predlistfirstsubject));
+
+
+
+        } catch (Exception e) {
 
         }
 
-        for (String s :list_nbest_first_subject) {
-            System.out.println(s);
-        }
-
-        //classificator.writeXlsx(excel_file_write, list_subject, list_phrase, list_first_subject, list_first_confidence, list_second_subject, list_second_confidence, list_third_subject, list_third_confidence);
-*/
-
-
-        classificator.reporting(list_pred_subject, list_nbest_first_subject);
-
-        ArrayList<String> true_subject = classificator.getTrue_subject();
-        ArrayList<String> pred_subject = classificator.getPred_subject();
-
-        ConfusionMatrix confusionMatrix = new ConfusionMatrix();
-        confusionMatrix.initMatrix(excel_matrix_write, true_subject, pred_subject);
-        confusionMatrix.fillingMatrix(excel_matrix_write, list_pred_subject, new ArrayList<String>(list_nbest_first_subject), true_subject, pred_subject);
     }
+//        ArrayList<String> list_pred_phrase = excelReader.readPhraseFromExcel();
+//        ArrayList<String> list_pred_subject = excelReader.readSubjectFromExcel();
+//        ArrayList<String> list_nbest_first_subject = classificator.classifyPhrase(host, port, url, excel_file_write, list_pred_subject, list_pred_phrase);
+//
+//               /* будущий задел под реализацию многопоточности
+//            int part = list_pred_phrase.size() / 4;
+//            final List<String> list_pred_phrase_first_part = list_pred_phrase.subList(0, part);
+//            final List<String> list_pred_phrase_second_part = list_pred_phrase.subList(part, part + part);
+//            final List<String> list_pred_phrase_third_part = list_pred_phrase.subList(part + part, part + part + part);
+//            final List<String> list_pred_phrase_fourth_part = list_pred_phrase.subList(part + part + part, list_pred_phrase.size());
+//
+//            final List<String> list_pred_subject_first_part = list_pred_subject.subList(0, part);
+//            final List<String> list_pred_subject_second_part = list_pred_subject.subList(part, part + part);
+//            final List<String> list_pred_subject_third_part = list_pred_subject.subList(part + part, part + part + part);
+//            final List<String> list_pred_subject_fourth_part = list_pred_subject.subList(part + part + part, list_pred_phrase.size());
+//
+//            Thread firtst_thread = new Threads() {
+//                @Override
+//                public void run() {
+//                    ArrayList<String> list_nbest_first_part_subject = classificator.classifyPhrase(host, port, url, excel_file_write, new ArrayList<String>(list_pred_subject_first_part), new ArrayList<String>(list_pred_phrase_first_part));
+//                    list_nbest_first_subject.addAll(list_nbest_first_part_subject);
+//                }
+//            };
+//            firtst_thread.start();
+//
+//            Thread second_thread = new Threads() {
+//                @Override
+//                public void run() {
+//                    ArrayList<String> list_nbest_second_part_subject = classificator.classifyPhrase(host, port, url, excel_file_write, new ArrayList<String>(list_pred_subject_second_part), new ArrayList<String>(list_pred_phrase_second_part));
+//                    list_nbest_first_subject.addAll(list_nbest_second_part_subject);
+//                }
+//            };
+//            second_thread.start();
+//
+//            Thread third_thread = new Threads() {
+//                @Override
+//                public void run() {
+//                    ArrayList<String> list_nbest_third_part_subject = classificator.classifyPhrase(host, port, url, excel_file_write, new ArrayList<String>(list_pred_subject_third_part), new ArrayList<String>(list_pred_phrase_third_part));
+//                    list_nbest_first_subject.addAll(list_nbest_third_part_subject);
+//                }
+//            };
+//            third_thread.start();
+//
+//            ArrayList<String> list_nbest_fourth_part_subject = classificator.classifyPhrase(host, port, url, excel_file_write, new ArrayList<String>(list_pred_subject_fourth_part), new ArrayList<String>(list_pred_phrase_fourth_part));
+//            list_nbest_first_subject.addAll(list_nbest_fourth_part_subject);
+//
+//        }
+//
+//        for (String s :list_nbest_first_subject) {
+//            System.out.println(s);
+//        }
+//
+//        //classificator.writeXlsx(excel_file_write, list_subject, list_phrase, list_first_subject, list_first_confidence, list_second_subject, list_second_confidence, list_third_subject, list_third_confidence);
+//*/
+//
+//
+//        classificator.reporting(list_pred_subject, list_nbest_first_subject);
+//
+//        ArrayList<String> true_subject = classificator.getTrue_subject();
+//        ArrayList<String> pred_subject = classificator.getPred_subject();
+//
+//        ConfusionMatrix confusionMatrix = new ConfusionMatrix();
+//        confusionMatrix.initMatrix(excel_matrix_write, true_subject, pred_subject);
+//        confusionMatrix.fillingMatrix(excel_matrix_write, list_pred_subject, new ArrayList<String>(list_nbest_first_subject), true_subject, pred_subject);
+//    }
 }
 

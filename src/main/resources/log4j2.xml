@@ -12,20 +12,24 @@
  
     <Loggers>
        <Logger name= "ru.yota.estimationutility.StartApp" level="all" additivity="false">
-           <AppenderRef ref="FileAppender"/>
+           <AppenderRef ref="Console"/>
        </Logger>
 	   
 	   <Logger name= "ru.yota.estimationutility.Classificator" level="all" additivity="false">
-           <AppenderRef ref="FileAppender"/>
+           <AppenderRef ref="Console"/>
        </Logger>
 	   
 	   <Logger name= "ru.yota.estimationutility.ConfusionMatrix" level="all" additivity="false">
-           <AppenderRef ref="FileAppender"/>
+           <AppenderRef ref="Console"/>
        </Logger>
+
+        <Logger name= "ru.yota.estimationutility.utils.HttpRequester" level="all" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
  
         <!-- Root Logger -->
         <Root level="all" >
-            <AppenderRef ref="FileAppender"/>
+            <AppenderRef ref="Console"/>
         </Root>
     </Loggers>
 	
