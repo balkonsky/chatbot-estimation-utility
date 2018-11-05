@@ -1,2 +1,2 @@
-# chatbot-estimation-utility
-utility for classification phrases from test set and creating confusion matrix based on precision and recall metrics
+# Genesys Push Test Plug
+Test Plug for Genesys CIM Platform. This plug is simulate custom http provider
